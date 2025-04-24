@@ -1,0 +1,65 @@
+# Install required packages
+!pip install kagglehub pandas numpy seaborn matplotlib scikit-learn
+
+# Import libraries
+import kagglehub
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+import os
+
+# Download the Titanic dataset
+path = kagglehub.dataset_download("yasserh/titanic-dataset")
+
+# Check what files are downloaded
+print("Files in dataset directory:")
+for file in os.listdir(path):
+    print(file)
+
+# Automatically detect CSV file
+csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
+print("Using file:", csv_files[0])
+
+# Load dataset
+df = pd.read_csv(os.path.join(path, csv_files[0]))
+df.head()
+
+# Step 1: Basic Info
+print(df.info())
+print(df.describe())
+print(df.isnull().sum())
+
+# Step 2: Handle Missing Values
+if 'Age' in df.columns:
+    df['Age'].fillna(df['Age'].median(), inplace=True)
+if 'Embarked' in df.columns:
+    df['Embarked'].fillna(df['Embarked'].mode()[0], inplace=True)
+if 'Cabin' in df.columns:
+    df.drop('Cabin', axis=1, inplace=True)
+
+# Step 3: Encode Categorical Variables
+if 'Sex' in df.columns:
+    df['Sex'] = df['Sex'].map({'male': 0, 'female': 1})
+if 'Embarked' in df.columns:
+    df = pd.get_dummies(df, columns=['Embarked'], drop_first=True)
+
+# Step 4: Normalize Numerical Columns
+scale_cols = [col for col in ['Age', 'Fare'] if col in df.columns]
+scaler = StandardScaler()
+df[scale_cols] = scaler.fit_transform(df[scale_cols])
+
+# Step 5: Outlier Removal (Fare as example)
+if 'Fare' in df.columns:
+    sns.boxplot(x=df['Fare'])
+    plt.title('Boxplot - Fare')
+    plt.show()
+
+    Q1 = df['Fare'].quantile(0.25)
+    Q3 = df['Fare'].quantile(0.75)
+    IQR = Q3 - Q1
+    df = df[(df['Fare'] >= (Q1 - 1.5 * IQR)) & (df['Fare'] <= (Q3 + 1.5 * IQR))]
+
+# Final Data Check
+df.head()
